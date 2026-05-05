@@ -1,98 +1,221 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Dimensions, StyleSheet, View } from 'react-native';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+const { width: SW, height: SH } = Dimensions.get('window');
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+// ─── Pixel art ───────────────────────────────────────────────────────────────
+const PX = 10;
+
+const PALETTE: Record<string, string | undefined> = {
+  K: '#111111', // outline
+  G: '#bdbdbd', // gray cat body
+  D: '#888888', // dark gray shadow
+  W: '#ffffff', // white (eyes)
+  P: '#ff9999', // pink poptart
+  L: '#ffbbcc', // light pink highlight
+  B: '#cc9944', // tan crust
+  F: '#ff6677', // blush
+  N: '#cc3355', // nose
+};
+
+// ' ' = transparent; other chars map via PALETTE
+const SPRITE = [
+  '      KKKK                    ',
+  '    KKDGGGDgKK                ',
+  '   KGGGGGGGGGgK               ',
+  '   KGWgGGGgWGGK    KBBBBBBBK  ',
+  '  KGGGGGGGGGGGgKKKBPPPPPPPBK  ',
+  '  KGGDGGGGDGGGgKBPPLPPPLPPBK  ',
+  '  KGGGGGGGGGGGgKBPPPPPPPPPBK  ',
+  '  KGWgGGGgWGGGgKBPPLPPPLPPBK  ',
+  '  KGGGGGGGGGGGgKBPPPPPPPPPBK  ',
+  '  KGGGGNFGGGGGgKBPPLPPPLPPBK  ',
+  '  KGGGGGGGGGGGgKBPPPPPPPPPBK  ',
+  '   KGGGGGGGGGgK  KBBBBBBBK    ',
+  '    KKDGGGDgKK                ',
+  '     K      K                 ',
+  '    KK      KK   KK    KK     ',
+];
+
+// Poptart starts at row 3, ends at row 11 → 9 rows × PX = 90px height
+// Rainbow should align with poptart body center
+const SPRITE_H = SPRITE.length * PX;
+const CAT_TOP = SH / 2 - SPRITE_H / 2;
+const POPTART_START_ROW = 3;
+const POPTART_END_ROW = 11;
+const RAINBOW_CENTER_Y =
+  CAT_TOP + POPTART_START_ROW * PX + ((POPTART_END_ROW - POPTART_START_ROW) * PX) / 2;
+
+// ─── Rainbow ─────────────────────────────────────────────────────────────────
+const RAINBOW = ['#ff0000', '#ff9900', '#ffff00', '#00cc00', '#0066ff', '#8800ff'];
+const STRIPE_H = 12;
+const RAINBOW_H = RAINBOW.length * STRIPE_H;
+const RAINBOW_TOP = RAINBOW_CENTER_Y - RAINBOW_H / 2;
+
+function Rainbow() {
+  const offset = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(offset, { toValue: -SW, duration: 700, useNativeDriver: true }),
+    ).start();
+  }, []);
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+    <Animated.View
+      style={[
+        StyleSheet.absoluteFill,
+        { transform: [{ translateX: offset }], overflow: 'visible' },
+      ]}>
+      {[0, 1, 2].map(copy =>
+        RAINBOW.map((color, i) => (
+          <View
+            key={`${copy}-${i}`}
+            style={{
+              position: 'absolute',
+              left: copy * SW,
+              top: RAINBOW_TOP + i * STRIPE_H,
+              width: SW,
+              height: STRIPE_H,
+              backgroundColor: color,
+            }}
+          />
+        )),
+      )}
+    </Animated.View>
   );
 }
 
-export default function HomeScreen() {
+// ─── Stars ───────────────────────────────────────────────────────────────────
+interface StarDef {
+  id: number;
+  x: number;
+  y: number;
+  size: number;
+  delay: number;
+  duration: number;
+}
+
+// Pre-generate deterministic-ish star positions (random but stable across renders)
+const STARS: StarDef[] = Array.from({ length: 18 }, (_, i) => ({
+  id: i,
+  x: ((i * 137.5) % (SW * 0.6)),
+  y: ((i * 93.7) % SH),
+  size: 4 + (i % 4),
+  delay: (i * 200) % 2000,
+  duration: 400 + (i % 3) * 200,
+}));
+
+function Star({ x, y, size, delay, duration }: StarDef) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.parallel([
+          Animated.timing(opacity, { toValue: 1, duration, useNativeDriver: true }),
+          Animated.timing(scale, { toValue: 1, duration, useNativeDriver: true }),
+        ]),
+        Animated.parallel([
+          Animated.timing(opacity, { toValue: 0, duration, useNativeDriver: true }),
+          Animated.timing(scale, { toValue: 0.4, duration, useNativeDriver: true }),
+        ]),
+      ]),
+    ).start();
+  }, []);
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+    <Animated.View
+      style={{
+        position: 'absolute',
+        left: x,
+        top: y,
+        opacity,
+        transform: [{ scale }],
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: size,
+        height: size,
+      }}>
+      <View style={{ width: size / 5, height: size, backgroundColor: '#ffffff' }} />
+      <View
+        style={{
+          position: 'absolute',
+          width: size,
+          height: size / 5,
+          backgroundColor: '#ffffff',
+        }}
+      />
+    </Animated.View>
+  );
+}
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+// ─── Cat bob ─────────────────────────────────────────────────────────────────
+function NyanCat() {
+  const bob = useRef(new Animated.Value(0)).current;
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(bob, { toValue: -6, duration: 150, useNativeDriver: true }),
+        Animated.timing(bob, { toValue: 6, duration: 150, useNativeDriver: true }),
+      ]),
+    ).start();
+  }, []);
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+  return (
+    <Animated.View style={{ transform: [{ translateY: bob }] }}>
+      {SPRITE.map((row, rowIdx) => (
+        <View key={rowIdx} style={styles.row}>
+          {Array.from(row).map((char, colIdx) => {
+            const color = PALETTE[char];
+            return (
+              <View
+                key={colIdx}
+                style={[styles.pixel, color ? { backgroundColor: color } : null]}
+              />
+            );
+          })}
+        </View>
+      ))}
+    </Animated.View>
+  );
+}
+
+// ─── Scene ───────────────────────────────────────────────────────────────────
+export default function NyanScreen() {
+  const catLeft = SW * 0.35;
+
+  return (
+    <View style={styles.bg}>
+      {STARS.map(s => (
+        <Star key={s.id} {...s} />
+      ))}
+      <Rainbow />
+      <View style={[styles.catWrap, { top: CAT_TOP, left: catLeft }]}>
+        <NyanCat />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  bg: {
     flex: 1,
-    justifyContent: 'center',
+    backgroundColor: '#0a0a2e',
+    overflow: 'hidden',
+  },
+  catWrap: {
+    position: 'absolute',
+  },
+  row: {
     flexDirection: 'row',
   },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  pixel: {
+    width: PX,
+    height: PX,
+    backgroundColor: 'transparent',
   },
 });
