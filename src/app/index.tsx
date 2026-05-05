@@ -10,6 +10,7 @@ const PALETTE: Record<string, string | undefined> = {
   K: '#111111', // outline
   G: '#bdbdbd', // gray cat body
   D: '#888888', // dark gray shadow
+  g: '#777777', // dark gray shadow (right-side, pupils)
   W: '#ffffff', // white (eyes)
   P: '#ff9999', // pink poptart
   L: '#ffbbcc', // light pink highlight
@@ -23,11 +24,11 @@ const SPRITE = [
   '      KKKK                    ',
   '    KKDGGGDgKK                ',
   '   KGGGGGGGGGgK               ',
-  '   KGWgGGGgWGGK    KBBBBBBBK  ',
+  '   KGKWKGGKWKgK    KBBBBBBBK  ',
   '  KGGGGGGGGGGGgKKKBPPPPPPPBK  ',
   '  KGGDGGGGDGGGgKBPPLPPPLPPBK  ',
   '  KGGGGGGGGGGGgKBPPPPPPPPPBK  ',
-  '  KGWgGGGgWGGGgKBPPLPPPLPPBK  ',
+  '  KGGGGGGGGGGGgKBPPLPPPLPPBK  ',
   '  KGGGGGGGGGGGgKBPPPPPPPPPBK  ',
   '  KGGGGNFGGGGGgKBPPLPPPLPPBK  ',
   '  KGGGGGGGGGGGgKBPPPPPPPPPBK  ',

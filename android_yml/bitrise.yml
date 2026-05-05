@@ -29,7 +29,7 @@ workflows:
     meta:
       bitrise.io:
         stack: linux-docker-android-22.04
-        machine_type_id: g2.linux.large
+        machine_type_id: g2.linux.x-large
     description: |
       Build a dev APK via Expo prebuild and android-build.
     steps:
